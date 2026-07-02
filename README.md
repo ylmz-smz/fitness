@@ -7,16 +7,18 @@
 需要 Node.js 20.19+ 或 22.12+。
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 生产构建与测试：
 
 ```bash
-npm test
-npm run build
+pnpm test
+pnpm build
 ```
+
+线上环境使用 pnpm 构建并发布到 `https://ylmz.vip/gym/`。推送 `main` 后，GitHub Webhook 会触发服务器自动拉取和更新。
 
 首次分析需要联网加载固定版本的 MediaPipe WASM 和 Pose Landmarker Lite 模型。之后的视频解码、关键点提取和规则分析均在浏览器本地完成。
 
