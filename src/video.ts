@@ -59,7 +59,8 @@ export async function analyzeVideo(
       await seek(video, Math.min(time, Math.max(0, video.duration - 0.001)));
       const result = landmarker.detectForVideo(video, Math.round(time * 1000));
       const landmarks = result.landmarks[0];
-      if (landmarks) frames.push(deriveFrame(time, landmarks, exercise.landmarks));
+      const worldLandmarks = result.worldLandmarks[0];
+      if (landmarks && worldLandmarks) frames.push(deriveFrame(time, landmarks, exercise.landmarks, worldLandmarks));
       onProgress(0.08 + 0.9 * Math.min(1, time / video.duration));
       if (index % 5 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
     }

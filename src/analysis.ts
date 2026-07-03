@@ -1,34 +1,44 @@
 import type { AnalysisResult, ExerciseDefinition, FormIssue, Point, PoseFrame, RepetitionResult } from "./types";
 
 const angle = (a: Point, b: Point, c: Point) => {
-  const ab = { x: a.x - b.x, y: a.y - b.y };
-  const cb = { x: c.x - b.x, y: c.y - b.y };
-  const cosine = (ab.x * cb.x + ab.y * cb.y) / (Math.hypot(ab.x, ab.y) * Math.hypot(cb.x, cb.y) || 1);
+  const ab = { x: a.x - b.x, y: a.y - b.y, z: (a.z ?? 0) - (b.z ?? 0) };
+  const cb = { x: c.x - b.x, y: c.y - b.y, z: (c.z ?? 0) - (b.z ?? 0) };
+  const cosine = (ab.x * cb.x + ab.y * cb.y + ab.z * cb.z) /
+    (Math.hypot(ab.x, ab.y, ab.z) * Math.hypot(cb.x, cb.y, cb.z) || 1);
   return Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI;
 };
 
 const distanceToLine = (point: Point, start: Point, end: Point) => {
-  const length = Math.hypot(end.x - start.x, end.y - start.y) || 1;
-  return Math.abs((end.y - start.y) * point.x - (end.x - start.x) * point.y + end.x * start.y - end.y * start.x) / length;
+  const line = { x: end.x - start.x, y: end.y - start.y, z: (end.z ?? 0) - (start.z ?? 0) };
+  const offset = { x: point.x - start.x, y: point.y - start.y, z: (point.z ?? 0) - (start.z ?? 0) };
+  const cross = {
+    x: offset.y * line.z - offset.z * line.y,
+    y: offset.z * line.x - offset.x * line.z,
+    z: offset.x * line.y - offset.y * line.x,
+  };
+  return Math.hypot(cross.x, cross.y, cross.z) / (Math.hypot(line.x, line.y, line.z) || 1);
 };
 
 const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
 
-export function deriveFrame(timestamp: number, landmarks: Point[], required: number[]): PoseFrame {
+export function deriveFrame(timestamp: number, landmarks: Point[], required: number[], worldLandmarks = landmarks): PoseFrame {
   const side = mean([11, 13, 15, 23, 25, 27].map((index) => landmarks[index]?.visibility ?? 0)) >=
     mean([12, 14, 16, 24, 26, 28].map((index) => landmarks[index]?.visibility ?? 0)) ? 0 : 1;
-  const shoulder = landmarks[11 + side];
-  const elbow = landmarks[13 + side];
-  const wrist = landmarks[15 + side];
-  const hip = landmarks[23 + side];
-  const knee = landmarks[25 + side];
-  const ankle = landmarks[27 + side];
-  const heel = landmarks[29 + side];
-  const toe = landmarks[31 + side];
-  const otherHip = landmarks[24 - side];
-  const otherKnee = landmarks[26 - side];
-  const otherAnkle = landmarks[28 - side];
-  const torsoFromVertical = Math.atan2(Math.abs(shoulder.x - hip.x), Math.abs(shoulder.y - hip.y) || 0.0001) * 180 / Math.PI;
+  const shoulder = worldLandmarks[11 + side];
+  const elbow = worldLandmarks[13 + side];
+  const wrist = worldLandmarks[15 + side];
+  const hip = worldLandmarks[23 + side];
+  const knee = worldLandmarks[25 + side];
+  const ankle = worldLandmarks[27 + side];
+  const heel = worldLandmarks[29 + side];
+  const toe = worldLandmarks[31 + side];
+  const otherHip = worldLandmarks[24 - side];
+  const otherKnee = worldLandmarks[26 - side];
+  const otherAnkle = worldLandmarks[28 - side];
+  const torsoFromVertical = Math.atan2(
+    Math.hypot(shoulder.x - hip.x, (shoulder.z ?? 0) - (hip.z ?? 0)),
+    Math.abs(shoulder.y - hip.y) || 0.0001,
+  ) * 180 / Math.PI;
 
   return {
     timestamp,
